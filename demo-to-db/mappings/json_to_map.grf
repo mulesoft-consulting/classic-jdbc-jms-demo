@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Graph author="adrianhsieh" created="Tue Feb 25 12:27:51 PST 2014" description="JSON To Map" guiVersion="3.4.3.P" id="1393363222618" licenseCode="Unlicensed" licenseType="Unknown" modified="Tue Feb 25 12:27:51 PST 2014" modifiedBy="adrianhsieh" name="JSON_To_Map" revision="1.0" showComponentDetails="false">
+<Global>
+<Metadata __index="0" __referenceCounter="1" __sourcePath="{}/from-jms" _dataStructure="OBJECT" _id="__id" _type="Input" id="b1786233-5d8d-4e1e-a92f-e8d4749d2458">
+<Record fieldDelimiter="," name="from_jms" recordDelimiter="\n\\|\r\n\\|\r" type="delimited">
+<Field __artificialType="_id" __systemManaged="true" name="__id" type="string"/>
+<Field __index="2" __sourcePath="{}/from-jms/contribution" containerType="SINGLE" label="contribution" name="contribution" type="number"/>
+<Field __index="0" __sourcePath="{}/from-jms/employeeId" containerType="SINGLE" label="employeeId" name="employeeId" type="integer"/>
+<Field __index="1" __sourcePath="{}/from-jms/jobLevel" containerType="SINGLE" label="jobLevel" name="jobLevel" type="string"/>
+<Field __index="3" __sourcePath="{}/from-jms/rate" containerType="SINGLE" label="rate" name="rate" type="number"/>
+<Field __index="4" __sourcePath="{}/from-jms/salaryBase" containerType="SINGLE" label="salaryBase" name="salaryBase" type="number"/>
+</Record>
+</Metadata>
+<Metadata __index="0" __referenceCounter="1" __sourcePath="{}/to-db" _dataStructure="OBJECT" _id="__id" _type="Output" id="3c770ec3-288c-4801-bf03-2dae30df5937">
+<Record fieldDelimiter="," name="to_db" recordDelimiter="\n\\|\r\n\\|\r" type="delimited">
+<Field __artificialType="_id" __systemManaged="true" name="__id" type="string"/>
+<Field __index="1" __sourcePath="{}/to-db/contribution" containerType="SINGLE" label="contribution" name="contribution" type="number"/>
+<Field __index="0" __sourcePath="{}/to-db/employee_x005fid" containerType="SINGLE" label="employee_id" name="employee_id" type="integer"/>
+<Field __index="2" __sourcePath="{}/to-db/rate" containerType="SINGLE" label="rate" name="rate" type="string"/>
+</Record>
+</Metadata>
+<Dictionary>
+<Entry id="DictionaryEntry0" input="true" name="inputPayload" output="false" type="object"/>
+<Entry id="DictionaryEntry1" input="false" name="outputPayload" output="true" type="object"/>
+</Dictionary>
+</Global>
+<Phase number="0">
+<Node enabled="enabled" guiName="Foreach 'from-jms' -&gt; 'to-db'" guiX="460" guiY="20" id="FOREACH_FROM_JMS_TO_DB" type="REFORMAT">
+<attr name="transform"><![CDATA[//#CTL2
+
+// Transforms input record into output record.
+function integer transform() {
+	$out.0.employee_id = $in.0.employeeId;
+//START -> DO NOT REMOVE
+$out.0.__id = $in.0.__id;
+//END -> DO NOT REMOVE
+$out.0.contribution = $in.0.contribution;
+$out.0.rate = (isnull($in.0.rate) ? null : num2str($in.0.rate));
+	return ALL;
+}
+
+// Called during component initialization.
+// function boolean init() {}
+
+// Called during each graph run before the transform is executed. May be used to allocate and initialize resources
+// required by the transform. All resources allocated within this method should be released
+// by the postExecute() method.
+// function void preExecute() {}
+
+// Called only if transform() throws an exception.
+// function integer transformOnError(string errorMessage, string stackTrace) {}
+
+// Called during each graph run after the entire transform was executed. Should be used to free any resources
+// allocated within the preExecute() method.
+// function void postExecute() {}
+
+// Called to return a user-defined error message when an error occurs.
+// function string getMessage() {}
+]]></attr>
+</Node>
+<Node charset="UTF-8" enabled="enabled" fileURL="dict:inputPayload" guiName="JSON READER" guiX="20" guiY="20" id="JSON_READER0" type="JSON_READER">
+<attr name="mapping"><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Context xpath="/root">
+  <Context outPort="0" sequenceField="__id" xpath="object">
+    <Mapping cloverField="contribution" trim="true" xpath="contribution"/>
+    <Mapping cloverField="employeeId" trim="true" xpath="employeeId"/>
+    <Mapping cloverField="jobLevel" trim="true" xpath="jobLevel"/>
+    <Mapping cloverField="rate" trim="true" xpath="rate"/>
+    <Mapping cloverField="salaryBase" trim="true" xpath="salaryBase"/>
+  </Context>
+</Context>
+]]></attr>
+<attr name="_data_format"><![CDATA[JSON]]></attr>
+</Node>
+<Node cacheInMemory="true" enabled="enabled" fileURL="dict:outputPayload" guiName="Map&lt;k,v&gt; WRITER" guiX="900" guiY="20" id="MAP_WRITER0" type="MAP_WRITER">
+<attr name="mapping"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<to-db xmlns:clover="http://www.cloveretl.com/ns/xmlmapping" clover:inPort="0">
+  <clover:element clover:name="employee_id">$0.employee_id</clover:element>
+  <contribution>$0.contribution</contribution>
+  <rate>$0.rate</rate>
+</to-db>]]></attr>
+<attr name="_data_format"><![CDATA[MAP]]></attr>
+</Node>
+<Edge debugMode="true" fromNode="FOREACH_FROM_JMS_TO_DB:0" guiBendpoints="" id="Edge1" inPort="Port 0 (in)" metadata="3c770ec3-288c-4801-bf03-2dae30df5937" outPort="Port 0 (out)" toNode="MAP_WRITER0:0"/>
+<Edge debugMode="true" fromNode="JSON_READER0:0" guiBendpoints="" id="Edge0" inPort="Port 0 (in)" metadata="b1786233-5d8d-4e1e-a92f-e8d4749d2458" outPort="Port 0 (out)" toNode="FOREACH_FROM_JMS_TO_DB:0"/>
+</Phase>
+</Graph>

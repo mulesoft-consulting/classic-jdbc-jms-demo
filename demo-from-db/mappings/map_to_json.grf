@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Graph author="adrianhsieh" created="Mon Feb 24 16:22:41 PST 2014" description="Map To JSON" guiVersion="3.4.3.P" id="1393288648913" licenseCode="Unlicensed" licenseType="Unknown" modified="Mon Feb 24 16:22:41 PST 2014" modifiedBy="adrianhsieh" name="Map_To_JSON" revision="1.0" showComponentDetails="false">
+<Global>
+<Metadata __index="0" __referenceCounter="1" __sourcePath="{}/database-record" _dataStructure="OBJECT" _id="__id" _type="Input" id="cf974f29-5373-4771-8202-9c77d4407ed0">
+<Record fieldDelimiter="," name="database_record" recordDelimiter="\n\\|\r\n\\|\r" type="delimited">
+<Field __artificialType="_id" __systemManaged="true" name="__id" type="string"/>
+<Field __index="1" __sourcePath="{}/database-record/base" containerType="SINGLE" label="base" name="base" type="number"/>
+<Field __index="2" __sourcePath="{}/database-record/grade" containerType="SINGLE" label="grade" name="grade" type="string"/>
+<Field __index="0" __sourcePath="{}/database-record/record_x005fnum" containerType="SINGLE" label="record_num" name="record_num" type="integer"/>
+</Record>
+</Metadata>
+<Metadata __index="0" __referenceCounter="1" __sourcePath="{}/json-record" _dataStructure="OBJECT" _id="__id" _type="Output" id="4415f423-1ee2-4d5b-b2f1-c41b5dd5757b">
+<Record fieldDelimiter="," name="json_record" recordDelimiter="\n\\|\r\n\\|\r" type="delimited">
+<Field __artificialType="_id" __systemManaged="true" name="__id" type="string"/>
+<Field __index="0" __sourcePath="{}/json-record/employeeId" containerType="SINGLE" label="employeeId" name="employee_id" type="integer"/>
+<Field __index="2" __sourcePath="{}/json-record/jobLevel" containerType="SINGLE" label="jobLevel" name="joblevel" type="string"/>
+<Field __index="1" __sourcePath="{}/json-record/salaryBase" containerType="SINGLE" label="salaryBase" name="salarybase" type="number"/>
+</Record>
+</Metadata>
+<Dictionary>
+<Entry id="DictionaryEntry0" input="true" name="inputPayload" output="false" type="object"/>
+<Entry id="DictionaryEntry1" input="false" name="outputPayload" output="true" type="object"/>
+</Dictionary>
+</Global>
+<Phase number="0">
+<Node enabled="enabled" fileURL="dict:inputPayload" guiName="Map&lt;k,v&gt; READER" guiX="20" guiY="20" id="BEAN_READER0" type="BEAN_READER">
+<attr name="mapping"><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Context outPort="0" sequenceField="__id" xpath=".">
+  <Mapping cloverField="base" trim="true" xpath="base"/>
+  <Mapping cloverField="grade" trim="true" xpath="grade"/>
+  <Mapping cloverField="record_num" trim="true" xpath="record_num"/>
+</Context>
+]]></attr>
+<attr name="_data_format"><![CDATA[MAP]]></attr>
+</Node>
+<Node enabled="enabled" guiName="Foreach 'database-record' -&gt; 'json-record'" guiX="460" guiY="20" id="FOREACH_DATABASE_RECORD_JSON_RECORD" type="REFORMAT">
+<attr name="transform"><![CDATA[//#CTL2
+
+// Transforms input record into output record.
+function integer transform() {
+	$out.0.salarybase = $in.0.base;
+	$out.0.joblevel = $in.0.grade;
+	$out.0.employee_id = $in.0.record_num;
+//START -> DO NOT REMOVE
+$out.0.__id = $in.0.__id;
+//END -> DO NOT REMOVE
+	return ALL;
+}
+
+// Called during component initialization.
+// function boolean init() {}
+
+// Called during each graph run before the transform is executed. May be used to allocate and initialize resources
+// required by the transform. All resources allocated within this method should be released
+// by the postExecute() method.
+// function void preExecute() {}
+
+// Called only if transform() throws an exception.
+// function integer transformOnError(string errorMessage, string stackTrace) {}
+
+// Called during each graph run after the entire transform was executed. Should be used to free any resources
+// allocated within the preExecute() method.
+// function void postExecute() {}
+
+// Called to return a user-defined error message when an error occurs.
+// function string getMessage() {}
+]]></attr>
+</Node>
+<Node charset="UTF-8" enabled="enabled" fileURL="dict:outputPayload" guiName="JSON WRITER" guiX="900" guiY="20" id="JSON_WRITER0" type="JSON_WRITER">
+<attr name="mapping"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<json-record xmlns:clover="http://www.cloveretl.com/ns/xmlmapping" clover:inPort="0">
+  <employeeId>$0.employee_id</employeeId>
+  <salaryBase>$0.salarybase</salaryBase>
+  <jobLevel>$0.joblevel</jobLevel>
+</json-record>]]></attr>
+<attr name="_data_format"><![CDATA[JSON]]></attr>
+</Node>
+<Edge debugMode="true" fromNode="BEAN_READER0:0" guiBendpoints="" id="Edge0" inPort="Port 0 (in)" metadata="cf974f29-5373-4771-8202-9c77d4407ed0" outPort="Port 0 (out)" toNode="FOREACH_DATABASE_RECORD_JSON_RECORD:0"/>
+<Edge debugMode="true" fromNode="FOREACH_DATABASE_RECORD_JSON_RECORD:0" guiBendpoints="" id="Edge1" inPort="Port 0 (in)" metadata="4415f423-1ee2-4d5b-b2f1-c41b5dd5757b" outPort="Port 0 (out)" toNode="JSON_WRITER0:0"/>
+</Phase>
+</Graph>

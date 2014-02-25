@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:context="http://www.springframework.org/schema/context" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.4.2"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <jms:activemq-connector name="Active_MQ" username="${activemq.user}" password="${activemq.password}" brokerURL="tcp://localhost:61616" validateConnections="true" doc:name="Active MQ"/>
+    <context:property-placeholder location="mule.properties"/>
+    <flow name="demo-jms-endpointFlow1" doc:name="demo-jms-endpointFlow1">
+        <jms:inbound-endpoint queue="Typical_Outbound" connector-ref="Active_MQ" doc:name="JMS"/>
+        <json:json-to-object-transformer returnClass="org.mulesoft.demo.PayrollRecord" doc:name="JSON to Object"/>
+        <choice doc:name="Choice">
+            <when expression="#[payload.jobLevel == 'A']">
+                <set-variable variableName="deduction-rate" value="#[0.1]" doc:name="A rate"/>
+            </when>
+            <when expression="#[payload.jobLevel == 'B']">
+                <set-variable variableName="deduction-rate" value="#[0.05]" doc:name="B rate"/>
+            </when>
+            <when expression="#[payload.jobLevel == 'C']">
+                <set-variable variableName="deduction-rate" value="#[0.075]" doc:name="C rate"/>
+            </when>
+            <otherwise>
+                <logger message="No matching Job Level found #[payload.jobLevel]" level="WARN" doc:name="Logger"/>
+                <set-variable variableName="deduction-rate" value="#[0.0]" doc:name="Zero rate"/>
+            </otherwise>
+        </choice>
+        <expression-component doc:name="set-rate"><![CDATA[#[payload.rate = flowVars['deduction-rate']]]]></expression-component>
+        <expression-component doc:name="contribution"><![CDATA[#[payload.contribution = payload.rate * payload.salaryBase]]]></expression-component>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <jms:outbound-endpoint queue="Typical_Inbound" connector-ref="Active_MQ" doc:name="JMS-out"/>
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <logger message="Exception Strategy placeholder #[message.exception]" level="ERROR" doc:name="Logger"/>
+        </catch-exception-strategy>
+    </flow>
+</mule>

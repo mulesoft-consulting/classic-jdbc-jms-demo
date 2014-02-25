@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:jdbc-ee="http://www.mulesoft.org/schema/mule/ee/jdbc" xmlns:context="http://www.springframework.org/schema/context" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.4.2"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/jdbc http://www.mulesoft.org/schema/mule/ee/jdbc/current/mule-jdbc-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+    <jdbc-ee:mysql-data-source name="MySQL_Data_Source" user="${mysql.user}" password="${mysql.password}" url="${mysql.jdbc.url}" transactionIsolation="UNSPECIFIED" doc:name="MySQL Data Source"/>
+    <jdbc-ee:connector name="MySQL_Connector" dataSource-ref="MySQL_Data_Source" validateConnections="true" doc:name="Database">
+        <jdbc-ee:query key="selectUnprocessed" value="SELECT record_num, base, grade FROM typical_input_table WHERE processed=0"/>
+        <jdbc-ee:query key="selectUnprocessed.ack" value="UPDATE typical_input_table SET processed=1 WHERE record_num=#[map-payload:record_num]"/>
+    </jdbc-ee:connector>
+    <context:property-placeholder location="mule.properties"/>
+    <spring:beans>
+        <spring:bean id="objectStore" name="objectStore" class="org.mule.util.store.SimpleMemoryObjectStore"/>
+    </spring:beans>
+    <jms:activemq-connector name="Active_MQ" username="${activemq.user}" password="${activemq.password}" brokerURL="tcp://localhost:61616" validateConnections="true" doc:name="Active MQ"/>
+    <data-mapper:config name="map_to_json" transformationGraphPath="map_to_json.grf" doc:name="map_to_json"/>
+    <flow name="demo-from-dbFlow1" doc:name="demo-from-dbFlow1">
+        <jdbc-ee:inbound-endpoint  queryTimeout="-1" pollingFrequency="${mysql.polling.frequency}" doc:name="selectUnprocessed" connector-ref="MySQL_Connector" queryKey="selectUnprocessed"/>
+        <data-mapper:transform config-ref="map_to_json" doc:name="Map To JSON"/>
+        <until-successful objectStore-ref="objectStore" maxRetries="5" secondsBetweenRetries="60" doc:name="Until Successful">
+            <jms:outbound-endpoint queue="Typical_Outbound" connector-ref="Active_MQ" doc:name="Out-to-Queue"/>
+        </until-successful>
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <logger message="Placeholder for exception strategy #[message.exception]" level="ERROR" doc:name="exception-strategy"/>
+        </catch-exception-strategy>
+    </flow>
+</mule>

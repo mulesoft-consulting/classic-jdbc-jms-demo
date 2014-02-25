@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:context="http://www.springframework.org/schema/context" xmlns:jdbc-ee="http://www.mulesoft.org/schema/mule/ee/jdbc" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.4.2"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/ee/jdbc http://www.mulesoft.org/schema/mule/ee/jdbc/current/mule-jdbc-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd">
+    <spring:beans>
+        <spring:bean id="objectStore" name="objectStore" class="org.mule.util.store.SimpleMemoryObjectStore"/>
+    </spring:beans>
+    <jms:activemq-connector name="Active_MQ" username="${activemq.user}" password="${activemq.password}" brokerURL="tcp://localhost:61616" validateConnections="true" doc:name="Active MQ"/>
+    <context:property-placeholder location="mule.properties"/>
+    <jdbc-ee:mysql-data-source name="MySQL_Data_Source" user="${mysql.user}" password="${mysql.password}" url="${mysql.jdbc.url}" transactionIsolation="UNSPECIFIED" doc:name="MySQL Data Source"/>
+    <jdbc-ee:connector name="Database" dataSource-ref="MySQL_Data_Source" validateConnections="true" queryTimeout="-1" pollingFrequency="0" doc:name="Database">
+        <jdbc-ee:query key="upsertRecords" value="INSERT INTO typical_output_table (employee_id,contribution,rate,last_modified_time) values (#[map-payload:employee_id],#[map-payload:contribution],#[map-payload:rate],now()) ON DUPLICATE KEY UPDATE contribution=#[map-payload:contribution],rate=#[map-payload:rate],last_modified_time=now()"/>
+    </jdbc-ee:connector>
+    <data-mapper:config name="json_to_map" transformationGraphPath="json_to_map.grf" doc:name="json_to_map"/>
+    <flow name="demo-to-dbFlow1" doc:name="demo-to-dbFlow1">
+        <jms:inbound-endpoint doc:name="JMS" connector-ref="Active_MQ" queue="Typical_Inbound"/>
+        <data-mapper:transform doc:name="JSON To Map" config-ref="json_to_map"/>
+        <logger message="Transformed Payload #[payload]" level="INFO" doc:name="Logger"/>
+        <until-successful objectStore-ref="objectStore" maxRetries="5" secondsBetweenRetries="60" doc:name="Until Successful">
+            <jdbc-ee:outbound-endpoint exchange-pattern="one-way"  queryTimeout="-1" doc:name="Upsert-Records" connector-ref="Database" queryKey="upsertRecords"/>
+        </until-successful>
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <logger message="Exception placeholder #[message.exception]" level="ERROR" doc:name="Logger"/>
+        </catch-exception-strategy>
+    </flow>
+</mule>
